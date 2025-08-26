@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { OrbitControls } from "three/OrbitControls.js";
+import { GLTFLoader } from "three/GLTFLoader.js";
 
 const STATE_COLORS = {
   pending:   0x9ca3af, // gray
@@ -17,9 +17,21 @@ let currentMode = "rotate";
 let selectedPoint = null; // THREE.Mesh reference
 const pointMap = new Map(); // id -> { mesh, data }
 
-init();
-await loadScene();
-animate();
+//init();
+async function start() {
+  try {
+    init();
+    await loadScene();
+    animate();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('info').textContent = 'Error: ' + err.message;
+  }
+}
+
+
+start();  // kick everything off
+//animate();
 
 function init() {
   scene = new THREE.Scene();
