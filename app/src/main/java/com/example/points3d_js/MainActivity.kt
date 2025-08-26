@@ -13,16 +13,18 @@ class MainActivity : ComponentActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
+        WebView.setWebContentsDebuggingEnabled(true);
         webView = WebView(this)
         setContentView(webView)
-        WebView.setWebContentsDebuggingEnabled(true);
+
 
         with(webView.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
             allowFileAccess = true
             allowContentAccess = true
+            allowFileAccessFromFileURLs=true
+            allowUniversalAccessFromFileURLs=true
             // Important for ES modules from file://
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             // Optional performance:
