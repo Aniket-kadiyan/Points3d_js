@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <title>Engine Assembly Steps</title>
+    <link rel="stylesheet" href="./styles.css" />
+
+    <!-- Import map pointing to local vendor files -->
+    <script type="importmap">
+        {
+          "imports": {
+            "three": "./vendor/three/three.module.js",
+            "three/addons/controls/OrbitControls.js": "./vendor/three/OrbitControls.js",
+            "three/addons/loaders/GLTFLoader.js": "./vendor/three/GLTFLoader.js"
+          }
+        }
+    </script>
+</head>
+<body>
+<div id="app">
+    <div id="overlay">
+        <div class="toolbar">
+            <div class="modes">
+                <button data-mode="rotate" class="active">Rotate</button>
+                <button data-mode="pan">Pan</button>
+                <button data-mode="select">Select</button>
+            </div>
+            <div class="state-controls">
+                <label>Set state:</label>
+                <button data-state="pending">Pending</button>
+                <button data-state="in_progress">In-Progress</button>
+                <button data-state="done">Done</button>
+                <button data-state="error">Error</button>
+            </div>
+        </div>
+        <div id="info">Tap a point in Select mode to change its state.</div>
+    </div>
+</div>
+
+<script type="module" src="./main.js"></script>
+</body>
+</html>

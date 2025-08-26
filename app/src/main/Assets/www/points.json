@@ -1,0 +1,5 @@
+[
+  { "id": "bolt_1", "name": "Bolt 1", "pos": [0.32, 0.45, 0.12], "state": "pending" },
+  { "id": "bolt_2", "name": "Bolt 2", "pos": [0.15, 0.39, -0.18], "state": "pending" },
+  { "id": "hose_clamp", "name": "Hose Clamp", "pos": [-0.28, 0.20, 0.06], "state": "pending" }
+]
