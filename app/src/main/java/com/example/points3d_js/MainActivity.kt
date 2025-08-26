@@ -3,9 +3,13 @@ package com.example.points3d_js
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.webkit.WebChromeClient
+import android.webkit.WebResourceRequest
+import android.webkit.WebResourceResponse
+import androidx.webkit.WebViewClientCompat
 import android.webkit.WebSettings
 import android.webkit.WebView
 import androidx.activity.ComponentActivity
+import androidx.webkit.WebViewAssetLoader
 
 class MainActivity : ComponentActivity() {
     private lateinit var webView: WebView
@@ -16,15 +20,24 @@ class MainActivity : ComponentActivity() {
         WebView.setWebContentsDebuggingEnabled(true);
         webView = WebView(this)
         setContentView(webView)
-
-
+        val assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .addPathHandler("/res/", WebViewAssetLoader.ResourcesPathHandler(this))
+            .build()
+        webView.webChromeClient = WebChromeClient()
+        webView.webViewClient = object : WebViewClientCompat() {
+            override fun shouldInterceptRequest(
+                view: WebView,
+                request: WebResourceRequest
+            ): WebResourceResponse? {
+                return assetLoader.shouldInterceptRequest(request.url)
+            }
+        }
         with(webView.settings) {
             javaScriptEnabled = true
             domStorageEnabled = true
             allowFileAccess = true
             allowContentAccess = true
-            allowFileAccessFromFileURLs=true
-            allowUniversalAccessFromFileURLs=true
             // Important for ES modules from file://
             mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
             // Optional performance:
@@ -32,8 +45,8 @@ class MainActivity : ComponentActivity() {
             mediaPlaybackRequiresUserGesture = false
         }
 
-        webView.webChromeClient = WebChromeClient()
-        webView.loadUrl("file:///android_asset/www/index.html")
+
+        webView.loadUrl("https://appassets.androidplatform.net/assets/www/index.html")
     }
 
     override fun onDestroy() {
