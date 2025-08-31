@@ -119,6 +119,7 @@ const maxDim = Math.max(size.x, size.y, size.z);
 const fov = THREE.MathUtils.degToRad(camera.fov); // convert vertical FOV to radians
 let distance = maxDim / (2 * Math.tan(fov / 2));
 distance *= 1.5; // add some extra space around the model
+window.pointRadius = maxDim * 0.05
 
 camera.position.copy(center).add(new THREE.Vector3(distance, distance, distance));
 camera.near = 0.1;
@@ -134,10 +135,12 @@ controls.minDistance = distance * 0.1; // prevent zooming inside the model
   // Load points
   const points = await (await fetch("./points.json")).json();
   addPoints(points);
+   window.pointKeys = Array.from(pointMap.keys());
+    window.currentPointIndex = -1;
 }
 
 function addPoints(points) {
-  const sphereGeom = new THREE.SphereGeometry(0.015, 16, 16); // ~1.5cm at unit scale
+  const sphereGeom = new THREE.SphereGeometry(window.pointRadius, 16, 16); // ~1.5cm at unit scale
   for (const p of points) {
     const color = STATE_COLORS[p.state] ?? STATE_COLORS.pending;
     const mat = new THREE.MeshStandardMaterial({
@@ -146,7 +149,9 @@ function addPoints(points) {
       metalness: 0.0,
       roughness: 0.2,
       transparent : true,
-      opacity:0.4
+      opacity:0.6,
+      depthTest: false,  // draw on top of the model
+      depthWrite: false
     });
     const m = new THREE.Mesh(sphereGeom, mat);
      const offset = window.modelCenter ?? new THREE.Vector3();
@@ -269,3 +274,31 @@ function animate() {
   controls.update();
   renderer.render(scene, camera);
 }
+
+function cyclePoints() {
+  const keys = window.pointKeys || [];
+  if (keys.length === 0) return;
+
+  // advance the index and wrap around
+  window.currentPointIndex = (window.currentPointIndex + 1) % keys.length;
+  const key = keys[window.currentPointIndex];
+  const entry = pointMap.get(key);
+  if (!entry) return;
+  const mesh = entry.mesh;
+
+  // highlight this point
+  selectPoint(mesh);
+
+  // move the controls’ target to the point’s position
+  const pos = mesh.position.clone();
+  controls.target.copy(pos);
+
+  // maintain current distance but pivot the camera around to the new target
+  const direction = camera.position.clone().sub(controls.target).normalize();
+  const distance = camera.position.distanceTo(controls.target);
+  camera.position.copy(pos).add(direction.multiplyScalar(distance));
+  camera.lookAt(pos);
+  controls.update();
+}
+document.getElementById('cycle-points').addEventListener('click', cyclePoints);
+
