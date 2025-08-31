@@ -62,11 +62,11 @@ function init() {
   // Controls
   controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
-  controls.enablePan = false; // toggled by mode
+  controls.enablePan = true
   controls.enableRotate = true;
   controls.screenSpacePanning = true;
-  controls.minDistance = 0.5;
-  controls.maxDistance = 10;
+//  controls.minDistance = 0.5;
+//  controls.maxDistance = 10;
 
   // Picking
   raycaster = new THREE.Raycaster();
@@ -83,7 +83,9 @@ function init() {
 async function loadScene() {
   // Load model
   const loader = new GLTFLoader();
-  const gltf = await loader.loadAsync("./models/engine.glb");
+//  const gltf = await loader.loadAsync("./models/engine.glb");
+  const gltf = await loader.loadAsync("./models/2CylinderEngine.gltf");
+
   const model = gltf.scene;
   model.traverse(o => {
     if (o.isMesh) {
@@ -95,14 +97,37 @@ async function loadScene() {
 
   // Fit view roughly
   const box = new THREE.Box3().setFromObject(model);
-  const size = new THREE.Vector3();
-  box.getSize(size);
-  const center = new THREE.Vector3();
-  box.getCenter(center);
-  controls.target.copy(center);
-  const fitDist = Math.max(size.x, size.y, size.z) * 1.5;
-  camera.position.copy(center).add(new THREE.Vector3(fitDist, fitDist * 0.8, fitDist));
-  camera.lookAt(center);
+//  const size = new THREE.Vector3();
+//  box.getSize(size);
+const size = box.getSize(new THREE.Vector3());
+//  const center = new THREE.Vector3();
+//  box.getCenter(center);
+const center = box.getCenter(new THREE.Vector3());
+
+// Re-center the model (optional)
+ model.position.sub(center);  // uncomment to center model at origin
+
+//  controls.target.copy(center);
+//  const fitDist = Math.max(size.x, size.y, size.z) * 1.5;
+//  camera.position.copy(center).add(new THREE.Vector3(fitDist, fitDist * 0.8, fitDist));
+//  camera.lookAt(center);
+
+// Move the camera back so the whole model fits in view
+const maxDim = Math.max(size.x, size.y, size.z);
+const fov = THREE.MathUtils.degToRad(camera.fov); // convert vertical FOV to radians
+let distance = maxDim / (2 * Math.tan(fov / 2));
+distance *= 1.5; // add some extra space around the model
+
+camera.position.copy(center).add(new THREE.Vector3(distance, distance, distance));
+camera.near = 0.1;
+camera.far = distance * 10;
+camera.updateProjectionMatrix();
+camera.lookAt(center);
+
+// Update OrbitControls target and zoom limits
+controls.target.copy(center);
+controls.maxDistance = distance * 2;   // allow zooming out farther if needed
+controls.minDistance = distance * 0.1; // prevent zooming inside the model
 
   // Load points
   const points = await (await fetch("./points.json")).json();
@@ -158,7 +183,7 @@ function onPointerMove(e) {
 }
 
 function onPointerDown(e) {
-  if (currentMode !== "select") return;
+//  if (currentMode !== "select") return;
   e.preventDefault();
   screenToRay(e.clientX, e.clientY);
   const hits = intersectPoints();
@@ -190,23 +215,23 @@ function setInfo(text) {
 
 function wireUI() {
   // Mode buttons
-  document.querySelectorAll('[data-mode]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentMode = btn.dataset.mode;
-      if (currentMode === "rotate") {
-        controls.enableRotate = true; controls.enablePan = false;
-        renderer.domElement.style.cursor = "grab";
-      } else if (currentMode === "pan") {
-        controls.enableRotate = false; controls.enablePan = true;
-        renderer.domElement.style.cursor = "grab";
-      } else {
-        controls.enableRotate = false; controls.enablePan = false;
-        renderer.domElement.style.cursor = "default";
-      }
-    });
-  });
+//  document.querySelectorAll('[data-mode]').forEach(btn => {
+//    btn.addEventListener('click', () => {
+//      document.querySelectorAll('[data-mode]').forEach(b => b.classList.remove('active'));
+//      btn.classList.add('active');
+//      currentMode = btn.dataset.mode;
+////      if (currentMode === "rotate") {
+////        controls.enableRotate = true; controls.enablePan = false;
+////        renderer.domElement.style.cursor = "grab";
+////      } else if (currentMode === "pan") {
+////        controls.enableRotate = false; controls.enablePan = true;
+////        renderer.domElement.style.cursor = "grab";
+////      } else {
+////        controls.enableRotate = false; controls.enablePan = false;
+////        renderer.domElement.style.cursor = "default";
+////      }
+//    });
+//  });
 
   // State buttons
   document.querySelectorAll('[data-state]').forEach(btn => {
