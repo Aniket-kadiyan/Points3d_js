@@ -107,6 +107,8 @@ const center = box.getCenter(new THREE.Vector3());
 // Re-center the model (optional)
  model.position.sub(center);  // uncomment to center model at origin
 
+ window.modelCenter = center.clone();    // save for points
+
 //  controls.target.copy(center);
 //  const fitDist = Math.max(size.x, size.y, size.z) * 1.5;
 //  camera.position.copy(center).add(new THREE.Vector3(fitDist, fitDist * 0.8, fitDist));
@@ -142,17 +144,25 @@ function addPoints(points) {
       color,
       emissive: 0x000000,
       metalness: 0.0,
-      roughness: 0.2
+      roughness: 0.2,
+      transparent : true,
+      opacity:0.4
     });
     const m = new THREE.Mesh(sphereGeom, mat);
-    m.position.set(p.pos[0], p.pos[1], p.pos[2]);
+     const offset = window.modelCenter ?? new THREE.Vector3();
+     m.position.set(
+          p.pos[0] - offset.x,
+          p.pos[1] - offset.y,
+          p.pos[2] - offset.z
+        );
     m.userData = { ...p };
     m.name = `pt_${p.id}`;
     m.renderOrder = 999; // keep visible
     // Optional halo/billboard could be added here
 
-    scene.add(m);
+
     pointMap.set(p.id, { mesh: m, data: p });
+    scene.add(m);
   }
 }
 
