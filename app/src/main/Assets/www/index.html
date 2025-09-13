@@ -19,6 +19,40 @@
           }
         }
     </script>
+    <script type="module">
+        import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js";
+
+        const deviceId = localStorage.getItem("deviceId") || "dev-001"; // set per device
+        const lineId   = localStorage.getItem("lineId")   || "line-A";
+
+        const client = mqtt.connect("ws://broker.hivemq.com:1883", {
+          // username: "user", password: "pass", // if you enable auth
+          keepalive: 60,
+          reconnectPeriod: 2000
+        });
+
+        client.on("connect", () => {
+          client.subscribe(`all/cmd`);
+          client.subscribe(`lines/${lineId}/cmd`);
+          client.subscribe(`devices/${deviceId}/cmd`);
+          client.subscribe('testtopic/ak/android');
+        });
+
+        client.on("message", async (topic, payload) => {
+          try {
+            const msg = JSON.parse(new TextDecoder().decode(payload));
+            console.log(msg);
+            if (msg.type === "SHOW_MODEL") {
+              await window.updateScene(msg.modelUrl, msg.pointsUrl); // your function
+              // optional ack
+              // client.publish(`devices/${deviceId}/ack`, JSON.stringify({ok:true,version:msg.version}));
+            }
+          } catch (e) {
+            console.error("Bad message", e);
+          }
+        });
+    </script>
+
 </head>
 <body>
 <div id="app">
@@ -39,6 +73,25 @@
             <button id="cycle-points">Focus next point</button>
         </div>
         <div id="info">Tap a point in Select mode to change its state.</div>
+    </div>
+    <div id="point-editor" class="point-editor" style="display:none;">
+        <h3>Edit Point</h3>
+        <label>Id <input type="text" id="edit-id" /></label><br/>
+        <label>Name <input type="text" id="edit-name" /></label><br/>
+        <label>X <input type="number" id="edit-x" step="0.001" /></label>
+        <label>Y <input type="number" id="edit-y" step="0.001" /></label>
+        <label>Z <input type="number" id="edit-z" step="0.001" /></label><br/>
+        <label>Radius <input type="number" id="edit-radius" step="0.001" /></label><br/>
+        <label>State
+            <select id="edit-state">
+                <option value="pending">Pending</option>
+                <option value="in_progress">In-Progress</option>
+                <option value="done">Done</option>
+                <option value="error">Error</option>
+            </select>
+        </label><br/>
+        <button id="save-point">Save</button>
+        <button id="cancel-point">Cancel</button>
     </div>
 </div>
 

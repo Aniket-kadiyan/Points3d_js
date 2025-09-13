@@ -80,11 +80,19 @@ function init() {
   renderer.domElement.addEventListener("pointermove", onPointerMove, { passive: false });
 }
 
+function qp(key) {
+  return new URLSearchParams(window.location.search).get(key);
+}
+
+
 async function loadScene() {
   // Load model
   const loader = new GLTFLoader();
 //  const gltf = await loader.loadAsync("./models/engine.glb");
-  const gltf = await loader.loadAsync("./models/2CylinderEngine.gltf");
+ const modelFile  = qp('model')  || './models/2CylinderEngine.gltf';
+  const pointsFile = qp('points') || './points.json';
+
+  const gltf = await loader.loadAsync(modelFile);
 
   const model = gltf.scene;
   model.traverse(o => {
@@ -133,15 +141,19 @@ controls.maxDistance = distance * 2;   // allow zooming out farther if needed
 controls.minDistance = distance * 0.1; // prevent zooming inside the model
 
   // Load points
-  const points = await (await fetch("./points.json")).json();
+  const points = await (await fetch(pointsFile)).json();
   addPoints(points);
    window.pointKeys = Array.from(pointMap.keys());
     window.currentPointIndex = -1;
 }
 
 function addPoints(points) {
-  const sphereGeom = new THREE.SphereGeometry(window.pointRadius, 16, 16); // ~1.5cm at unit scale
+ window.points = points; // keep a mutable copy for editing
+
+
   for (const p of points) {
+  const radius = p.radius ?? window.pointRadius;   // <= pick per‑point radius
+  const sphereGeom = new THREE.SphereGeometry(radius, 16, 16); // ~1.5cm at unit scale
     const color = STATE_COLORS[p.state] ?? STATE_COLORS.pending;
     const mat = new THREE.MeshStandardMaterial({
       color,
@@ -215,6 +227,7 @@ function selectPoint(mesh) {
   selectedPoint = mesh;
   setEmphasis(mesh, true);
   setInfo(`Selected: ${mesh.userData.name} (${mesh.userData.id}) — state: ${mesh.userData.state}`);
+  showEditor(mesh);
 }
 
 function setEmphasis(mesh, on) {
@@ -300,5 +313,107 @@ function cyclePoints() {
   camera.lookAt(pos);
   controls.update();
 }
+
+
+function showEditor(mesh) {
+  const editor = document.getElementById('point-editor');
+  const offset = window.modelCenter ?? new THREE.Vector3();
+
+  document.getElementById('edit-id').value = mesh.userData.id;
+  document.getElementById('edit-name').value = mesh.userData.name;
+  document.getElementById('edit-x').value = (mesh.position.x + offset.x).toFixed(3);
+  document.getElementById('edit-y').value = (mesh.position.y + offset.y).toFixed(3);
+  document.getElementById('edit-z').value = (mesh.position.z + offset.z).toFixed(3);
+  document.getElementById('edit-radius').value = (mesh.userData.radius ?? window.pointRadius).toFixed(3);
+  document.getElementById('edit-state').value = mesh.userData.state;
+
+  editor.style.display = 'block';
+}
+
+function hideEditor() {
+  document.getElementById('point-editor').style.display = 'none';
+}
+
 document.getElementById('cycle-points').addEventListener('click', cyclePoints);
+
+document.getElementById('save-point').addEventListener('click', () => {
+  if (!selectedPoint) return;
+
+  const oldId = selectedPoint.userData.id;
+  const newId = document.getElementById('edit-id').value.trim();
+  const newName = document.getElementById('edit-name').value.trim();
+  const x = parseFloat(document.getElementById('edit-x').value);
+  const y = parseFloat(document.getElementById('edit-y').value);
+  const z = parseFloat(document.getElementById('edit-z').value);
+  let radius = parseFloat(document.getElementById('edit-radius').value);
+  if (!isFinite(radius)) radius = window.pointRadius;
+  const state = document.getElementById('edit-state').value;
+
+  // update mesh position relative to model center
+  const offset = window.modelCenter ?? new THREE.Vector3();
+  selectedPoint.position.set(x - offset.x, y - offset.y, z - offset.z);
+
+  // update geometry if radius changed
+  if ((selectedPoint.userData.radius ?? window.pointRadius) !== radius) {
+    selectedPoint.geometry.dispose();
+    selectedPoint.geometry = new THREE.SphereGeometry(radius, 16, 16);
+  }
+
+  // update color if state changed
+  if (selectedPoint.userData.state !== state) {
+    selectedPoint.material.color = new THREE.Color(STATE_COLORS[state] ?? STATE_COLORS.pending);
+  }
+
+  // update userData
+  selectedPoint.userData = {
+    id: newId,
+    name: newName,
+    pos: [x, y, z],
+    radius: radius,
+    state: state
+  };
+
+  // update pointMap keys if id changed
+  if (oldId !== newId) {
+    const entry = pointMap.get(oldId);
+    pointMap.delete(oldId);
+    pointMap.set(newId, entry);
+    // update cycling array
+    const idx = window.pointKeys.indexOf(oldId);
+    if (idx !== -1) window.pointKeys[idx] = newId;
+    // update in the window.points array (for persistence)
+  }
+
+  // update window.points (the array loaded from points.json)
+  const idx = window.points.findIndex(pt => pt.id === oldId);
+  if (idx !== -1) {
+    window.points[idx] = { id: newId, name: newName, pos: [x, y, z], radius, state };
+  }
+
+  hideEditor();
+});
+
+window.updateScene = async function(modelFile, pointsFile) {
+  // remove existing meshes
+  pointMap.forEach(({ mesh }) => scene.remove(mesh));
+  pointMap.clear();
+  scene.remove(scene.getObjectByName('loadedModel')); // if you gave your model a name
+
+  // Load the new model
+  const gltf = await new GLTFLoader().loadAsync(modelFile);
+  const model = gltf.scene;
+  model.name = 'loadedModel';
+  scene.add(model);
+
+  // recompute camera framing and pointRadius as in loadScene()
+
+  // Load new points
+  const points = await (await fetch(pointsFile)).json();
+  addPoints(points);
+  window.points = points;
+};
+
+
+document.getElementById('cancel-point').addEventListener('click', hideEditor);
+
 
