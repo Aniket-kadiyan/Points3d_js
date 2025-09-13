@@ -19,38 +19,40 @@
           }
         }
     </script>
-    <script type="module">
-        import mqtt from "https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js";
+    <script src="https://cdn.jsdelivr.net/npm/mqtt@5.10.1/dist/mqtt.min.js"></script>
+    <script >
 
-        const deviceId = localStorage.getItem("deviceId") || "dev-001"; // set per device
-        const lineId   = localStorage.getItem("lineId")   || "line-A";
+         const deviceId = localStorage.getItem("deviceId") || "dev-001"; // set per device
+         const lineId   = localStorage.getItem("lineId")   || "line-A";
 
-        const client = mqtt.connect("ws://broker.hivemq.com:1883", {
-          // username: "user", password: "pass", // if you enable auth
-          keepalive: 60,
-          reconnectPeriod: 2000
-        });
+         const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
+           // username: "user", password: "pass", // if you enable auth
+           protocol: 'wss' ,
+           keepalive: 60,
+           reconnectPeriod: 2000
+         });
 
-        client.on("connect", () => {
-          client.subscribe(`all/cmd`);
-          client.subscribe(`lines/${lineId}/cmd`);
-          client.subscribe(`devices/${deviceId}/cmd`);
-          client.subscribe('testtopic/ak/android');
-        });
+         client.on("connect", () => {
+           client.subscribe(`all/cmd`);
+           client.subscribe(`lines/${lineId}/cmd`);
+           client.subscribe(`devices/${deviceId}/cmd`);
+           client.subscribe('testtopic/ak/android');
+         });
 
-        client.on("message", async (topic, payload) => {
-          try {
-            const msg = JSON.parse(new TextDecoder().decode(payload));
-            console.log(msg);
-            if (msg.type === "SHOW_MODEL") {
-              await window.updateScene(msg.modelUrl, msg.pointsUrl); // your function
-              // optional ack
-              // client.publish(`devices/${deviceId}/ack`, JSON.stringify({ok:true,version:msg.version}));
-            }
-          } catch (e) {
-            console.error("Bad message", e);
-          }
-        });
+         client.on("message", async (topic, payload) => {
+           try {
+             const msg = JSON.parse(new TextDecoder().decode(payload));
+             console.log(msg);
+             if (msg.line == lineId) {
+             console.log("changing model")
+               await window.updateScene(msg.modelUrl, msg.pointsUrl); // your function
+               // optional ack
+               // client.publish(`devices/${deviceId}/ack`, JSON.stringify({ok:true,version:msg.version}));
+             }
+           } catch (e) {
+             console.error("Bad message", e);
+           }
+         });
     </script>
 
 </head>

@@ -101,6 +101,7 @@ async function loadScene() {
       o.material.side = THREE.FrontSide;
     }
   });
+   model.name = 'loadedModel';
   scene.add(model);
 
   // Fit view roughly
@@ -394,7 +395,7 @@ document.getElementById('save-point').addEventListener('click', () => {
 });
 
 window.updateScene = async function(modelFile, pointsFile) {
-  // remove existing meshes
+  console.log("remove existing meshes")
   pointMap.forEach(({ mesh }) => scene.remove(mesh));
   pointMap.clear();
   scene.remove(scene.getObjectByName('loadedModel')); // if you gave your model a name
@@ -405,12 +406,49 @@ window.updateScene = async function(modelFile, pointsFile) {
   model.name = 'loadedModel';
   scene.add(model);
 
-  // recompute camera framing and pointRadius as in loadScene()
+// Fit view roughly
+  const box = new THREE.Box3().setFromObject(model);
+//  const size = new THREE.Vector3();
+//  box.getSize(size);
+const size = box.getSize(new THREE.Vector3());
+//  const center = new THREE.Vector3();
+//  box.getCenter(center);
+const center = box.getCenter(new THREE.Vector3());
+
+// Re-center the model (optional)
+ model.position.sub(center);  // uncomment to center model at origin
+
+ window.modelCenter = center.clone();    // save for points
+
+//  controls.target.copy(center);
+//  const fitDist = Math.max(size.x, size.y, size.z) * 1.5;
+//  camera.position.copy(center).add(new THREE.Vector3(fitDist, fitDist * 0.8, fitDist));
+//  camera.lookAt(center);
+
+// Move the camera back so the whole model fits in view
+const maxDim = Math.max(size.x, size.y, size.z);
+const fov = THREE.MathUtils.degToRad(camera.fov); // convert vertical FOV to radians
+let distance = maxDim / (2 * Math.tan(fov / 2));
+distance *= 1.5; // add some extra space around the model
+window.pointRadius = maxDim * 0.05
+
+camera.position.copy(center).add(new THREE.Vector3(distance, distance, distance));
+camera.near = 0.1;
+camera.far = distance * 10;
+camera.updateProjectionMatrix();
+camera.lookAt(center);
+
+// Update OrbitControls target and zoom limits
+controls.target.copy(center);
+controls.maxDistance = distance * 2;   // allow zooming out farther if needed
+controls.minDistance = distance * 0.1; // prevent zooming inside the model
 
   // Load new points
+
   const points = await (await fetch(pointsFile)).json();
-  addPoints(points);
-  window.points = points;
+    addPoints(points);
+     window.pointKeys = Array.from(pointMap.keys());
+      window.currentPointIndex = -1;
 };
 
 
